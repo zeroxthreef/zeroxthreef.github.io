@@ -1,15 +1,165 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>Boing online interpreter</title>
-		<meta name="description" content="Run boing scripts in your borwser"/>
-		<meta name="DC.title" content="Boing online interpreter"/>
-		<meta charset="UTF-8" />
-		<link href="/style.css" rel="stylesheet" type="text/css">
+		<meta charset="utf-8">
+		<title>boing interpreter</title>
+		<style>
+			html, body {
+				margin: 0;
+				height: 100%;
+				width: 100%;
+				font-family: Arial, Helvetica, sans-serif;
+				font-size: x-large;
+				color: #272727;
+			}
+
+			.left_content {
+				margin: auto;
+				overflow: auto;
+				height: 95%;
+				width: 48%;
+				padding: 1%;
+				float: left;
+			}
+			.right_content {
+				margin: auto;
+				overflow: auto;
+				width: 47%;
+				height: 95%;
+				padding: 1%;
+				float: right;
+				border-left: 3px solid #000000;
+			}
+
+			#script {
+				min-width: 100%;
+				max-width: 100%;
+				height: 50%;
+				-webkit-box-sizing: border-box;
+				-moz-box-sizing: border-box;
+				box-sizing: border-box;
+			}
+
+			#console_output {
+				min-width: 100%;
+				max-width: 100%;
+				height: 20%;
+				-webkit-box-sizing: border-box;
+				-moz-box-sizing: border-box;
+				box-sizing: border-box;
+			}
+
+			#console_input {
+				min-width: 80%;
+				max-width: 80%;
+				-webkit-box-sizing: border-box;
+				-moz-box-sizing: border-box;
+				box-sizing: border-box;
+			}
+		</style>
 	</head>
 	<body>
-		<div class="center_div">
-			TODO: compile boing with emscripten
+		<div class="left_content">
+			<b>script:</b>
+			<hr>
+			<textarea id="script">l&ltI 20{
+	p"hello world" nI
+}</textarea>
+			<br>
+			<button id="run_button"">run</button>
+			<button onclick="getElementById('script').value = window.location.href + '?s=' + encodeURIComponent(getElementById('script').value)">convert to sharable url</button>
+			<br><br>
+			<b>console:</b>
+			<textarea id="console_output" readonly></textarea>
+			<textarea rows="1" id="console_input" placeholder="type here"></textarea>
+			<button>enter</button>
 		</div>
+		<div class="right_content">
+			<b>screen area:</b>
+			<hr>
+			<canvas id="screen" oncontextmenu="event.preventDefault()"></canvas>
+		</div>
+
+		<script type="text/javascript">
+			var boing = null;
+			var script_run = null;
+
+			var urlp = new URLSearchParams(window.location.search);
+			var new_script = urlp.get("s");
+			if(new_script)
+			{
+				console.log("setting script textarea to s query parameter");
+				var script = document.getElementById("script");
+				script.value = new_script;
+			}
+
+			var Module = {
+				preRun: [],
+				postRun: [],
+				print: (function() {
+					var console_output = document.getElementById("console_output");
+
+					if(console_output)
+						console_output.value = "";
+					
+					return function(text) {
+						if(arguments.length > 1)
+							text = Array.prototype.slice.call(arguments).join(" ");
+						
+						console.log(text);
+
+						if(console_output)
+						{
+							console_output.value += text + "\n";
+							console_output.scrollTop = console_output.scrollHeight;
+						}
+					};
+				})(),
+				printErr: function(text) {
+					var console_output = document.getElementById("console_output");
+					
+					console.error(text);
+
+					if(console_output)
+					{
+						console_output.value += "ERROR: " + text + "\n";
+						console_output.scrollTop = console_output.scrollHeight;
+					}
+				},
+				canvas: (function() {
+					var canvas = document.getElementById("screen");
+					
+					canvas.addEventListener("webglcontextlost", function(e) {console.error("webgl ctx lost"); e.preventDefault();}, false);
+
+					return canvas;
+				})(),
+				setStatus: (function(text) {
+
+				})(),
+				onRuntimeInitialized: function() {
+					console.log("initialized");
+
+					boing = Module.ccall("init_host", "number", null);
+					console.log("boing return value: " + boing);
+
+					script_run = Module.cwrap("script_run", null, ["number", "string"]);
+					console.log("script_run: " + script_run);
+
+
+					document.getElementById("run_button").onclick = function(){
+							var script_text = document.getElementById("script").value;
+							var console_output = document.getElementById("console_output");
+
+							console_output.value = "";
+
+							console.log("running script: '" + script_text + "'");
+							script_run(boing, script_text);
+						};
+				}
+			};
+
+			console.log("loading...");
+		</script>
+		<script async type="text/javascript" src="boing.js"></script>
 	</body>
 </html>
