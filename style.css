@@ -11,3 +11,11 @@ html, body {
 	min-width: 70%;
 	max-width: 80%;
 }
+
+.project_container {
+	overflow: auto;
+	width: 100%;
+	padding: 1%;
+	background-color: #ebe6e2;
+	margin-bottom: 2%;
+}
